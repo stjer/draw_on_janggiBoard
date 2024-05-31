@@ -6,18 +6,19 @@ import mss
 def capture_screenshot(path = 'tmp_screenshot.png'):
     with mss.mss() as sct:
         img = sct.shot(output = path)
+#def capture_screenshot(region, output_path): #원하는 부분만 잘라서 스크린샷을 찍고 싶다면 이런 식으로 할 수도 있다.
+#    with mss.mss() as sct:
+#        img = sct.grab(region) #~~~
 
 # 이미지 및 라인 탐지 코드
 capture_screenshot('tmp_screenshot.png')
-image = cv2.imread('tmp_screenshot.png')
-gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-edges = cv2.Canny(gray, 50, 150, apertureSize=3)
-lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 200, minLineLength=100, maxLineGap=10)
-origin_image = image.copy()
+image = cv2.imread('tmp_screenshot.png')#이미지 불러오기
+gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)#이미지 전처리
+edges = cv2.Canny(gray, 50, 150, apertureSize=3)#이미지 윤곽 잡기
+lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 200, minLineLength=100, maxLineGap=10)#윤곽에서 선 찾기
+origin_image = image.copy()#이미지 원본을 백업용으로 준비
 
-
-
-def find_intersections(lines):
+def find_intersections(lines): #교차점 찾기
     intersections = []
     for i, line1 in enumerate(lines):
         for line2 in lines[i+1:]:
@@ -51,12 +52,11 @@ def closest_intersection(point, intersections, threshold):
 
 def draw_arrow(image, start, end, color):
     distance = round(math.sqrt((end[0] - start[0]) ** 2 + (end[1] - start[1]) ** 2),2)
-
-    # 거리로 tipLength 계산
+    # 거리로 tipLength 를 나눠서 화살표 < 부분의 크기를 일정하게 하고자 했음.
     tip_l = round(30/distance, 2) if distance != 0 else 0.01 #30은 임의의 값.
     cv2.arrowedLine(image, start, end, color, 2, tipLength=tip_l)
 
-#def draw_arrow2(image, start, end, color, t=0.9):
+#def draw_arrow2(image, start, end, color, t=0.9): # 화살표 길이의 비율을 조정하는 함수. 딱히 쓸 일은 없을 것.
 #    x1, y1 = start
 #    x2, y2 = end
 #    x = int(x1 + t * (x2 - x1))
@@ -69,9 +69,9 @@ def draw_line(event, x, y, flags, param):
     if event == cv2.EVENT_RBUTTONDOWN:
         
         if flags & cv2.EVENT_FLAG_CTRLKEY:
-            color = (255, 0, 0)  # Ctrl 키가 눌린 경우 색상 변경
+            color = (255, 0, 0)  # Ctrl 키가 눌린 경우 색상 변경(파랑)
         else:
-            color = (0, 255, 0)  # 기본 색상
+            color = (0, 255, 0)  # 기본 색상(초록)
             
         nearest_start = closest_intersection((x, y), intersections, distance_threshold)
         ns = nearest_start
@@ -103,13 +103,13 @@ def draw_line(event, x, y, flags, param):
                 current_line = None
             nearest_end = closest_intersection((x, y), intersections, distance_threshold)
             ne = nearest_end
-            if ns == ne:
+            if ns == ne: # 시작 지점과 도착 지점 주변의 격자점이 동일할 때
                 # 격자점 주변에 원 또는 X자 그리기
                 numr = 25#도형 크기 지정
-                if flags & cv2.EVENT_FLAG_SHIFTKEY:
+                if flags & cv2.EVENT_FLAG_SHIFTKEY: #X자 그리기
                     cv2.line(image, (ns[0]-numr, ns[1]-numr), (ns[0]+numr, ns[1]+numr), color, 2)
                     cv2.line(image, (ns[0]+numr, ns[1]-numr), (ns[0]-numr, ns[1]+numr), color, 2)
-                else:
+                else: # O자 그리기
                     cv2.circle(image, (ns[0], ns[1]), numr, color, 2)
             cv2.imshow('Image', image)
 
